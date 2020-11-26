@@ -211,6 +211,80 @@ public class ImageColorSpaceTest extends TestCaseBase {
         pdfDocument.close();
     }
 
+
+    /**
+     * Crop center of the image with the display area, add a mask on it and add to pdf page.
+     * Mask applied on cropped zone
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testAddImageToPdfWithPdfCanvasCropCenterAndMaskOnCroppedZone() throws Exception {
+
+        String imageWithIcc = resourceFile("images/image-ios-profile.jpg");
+        String imageMask = resourceFile("masks/circle.png");
+        String destination = targetFile("image-colorspace-AddImageToPdfWithPdfCanvasCropCenterAndMaskOnCroppedZone.pdf");
+
+        float margin = mm2pt(10f);
+        float dspWidth = mm2pt(160f);
+        float dspHeight = mm2pt(160f);
+        float pageWidth = dspWidth + margin * 2;
+        float pageHeight = dspHeight + margin * 2;
+
+        PdfDocument pdfDocument = new PdfDocument(new PdfWriter(destination));
+        PdfPage page = pdfDocument.addNewPage(new PageSize(pageWidth, pageHeight));
+
+        // create cropped image xObject
+        ImageData imageData = ImageDataFactory.create(imageWithIcc);
+
+        int imgWidth = (int)imageData.getWidth();
+        int imgHeight = (int)imageData.getHeight();
+        int cropX, cropY, cropWidth, cropHeight;
+
+        if (imgWidth / dspWidth > imgHeight / dspHeight) {
+            cropHeight = imgHeight;
+            cropWidth = (int) Math.ceil((double)imgHeight / dspHeight * dspWidth);
+            cropX = (int)Math.floor((imgWidth - cropWidth) / 2);
+            cropY = 0;
+        } else {
+            cropWidth = imgWidth;
+            cropHeight = (int)Math.ceil((double)imgWidth / dspWidth * dspHeight);
+            cropX = 0;
+            cropY = (int)Math.floor((imgHeight - cropHeight) / 2);
+        }
+
+        // create mask
+        ImageData maskData = makeBlackAndWhitePngExpand(imageMask, imgWidth, imgHeight, cropX, cropY, cropWidth, cropHeight);
+        maskData.makeMask();
+        imageData.setImageMask(maskData);
+
+
+        Image img = new Image(imageData);
+
+        img.setFixedPosition(-cropX, -cropY);
+
+        PdfFormXObject croppedImage = new PdfFormXObject(new Rectangle(cropWidth, cropHeight));
+
+        Canvas canvas = new Canvas(croppedImage, pdfDocument);
+        canvas.add(img);
+
+        // create page canvas
+        PdfCanvas pdfCanvas = new PdfCanvas(page);
+
+        // create AT
+        AffineTransform at = AffineTransform.getTranslateInstance(margin, margin);
+        at.concatenate(AffineTransform.getScaleInstance(dspWidth / croppedImage.getWidth(), dspHeight / croppedImage.getHeight()));
+
+        float[] matrix = new float[6];
+        at.getMatrix(matrix);
+
+        // add cropped image
+        pdfCanvas.addXObjectWithTransformationMatrix(croppedImage, matrix[0], matrix[1], matrix[2], matrix[3], matrix[4], matrix[5]);
+
+        pdfCanvas.release();
+        pdfDocument.close();
+    }
+
     private static ImageData makeBlackAndWhitePng(String image) throws Exception {
         BufferedImage bi = ImageIO.read(new File(image));
         BufferedImage newBi = new BufferedImage(bi.getWidth(), bi.getHeight(), BufferedImage.TYPE_USHORT_GRAY);
@@ -219,4 +293,20 @@ public class ImageColorSpaceTest extends TestCaseBase {
         ImageIO.write(newBi, "png", os);
         return ImageDataFactory.create(os.toByteArray());
     }
+
+    private static ImageData makeBlackAndWhitePngExpand(String image, int origImageWidth, int origImageHeight, int cropX, int cropY, int cropWidth, int cropHeight) throws Exception {
+
+        BufferedImage bi = ImageIO.read(new File(image));
+
+        BufferedImage maskImage = new BufferedImage(
+                (int) Math.ceil((double)origImageWidth * bi.getWidth() / cropWidth),
+                (int) Math.ceil((double)origImageHeight * bi.getHeight() / cropHeight),
+                BufferedImage.TYPE_USHORT_GRAY);
+
+        maskImage.getGraphics().drawImage(bi, cropX * maskImage.getWidth()/origImageWidth, cropY * maskImage.getHeight()/origImageHeight, null);
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        ImageIO.write(maskImage, "png", os);
+        return ImageDataFactory.create(os.toByteArray());
+    }
+
 }
