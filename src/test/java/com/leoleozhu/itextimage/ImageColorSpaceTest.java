@@ -1,4 +1,4 @@
-package com.leoleozhu.utils.itextimage;
+package com.leoleozhu.itextimage;
 
 import com.itextpdf.io.image.ImageData;
 import com.itextpdf.io.image.ImageDataFactory;
