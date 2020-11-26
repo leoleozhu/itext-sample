@@ -19,6 +19,7 @@ public class ImageColorSpaceTest extends TestCaseBase {
 
     /**
      * Add the image to the center of the display area.
+     *
      * @throws Exception
      */
     @Test
@@ -41,11 +42,11 @@ public class ImageColorSpaceTest extends TestCaseBase {
         float imgWidth = imageData.getWidth();
         float imgHeight = imageData.getHeight();
 
-        float dspOffsetX = (dspWidth/dspHeight > imgWidth/imgHeight) ?
-                (dspWidth - (dspHeight/imgHeight * imgWidth))/2 : 0;
+        float dspOffsetX = (dspWidth / dspHeight > imgWidth / imgHeight) ?
+                (dspWidth - (dspHeight / imgHeight * imgWidth)) / 2 : 0;
 
-        float dspOffsetY = (dspWidth/dspHeight < imgWidth/imgHeight) ?
-                (dspHeight - (dspWidth/imgWidth * imgHeight))/2 : 0;
+        float dspOffsetY = (dspWidth / dspHeight < imgWidth / imgHeight) ?
+                (dspHeight - (dspWidth / imgWidth * imgHeight)) / 2 : 0;
 
         // create page canvas
         PdfCanvas pdfCanvas = new PdfCanvas(page);
@@ -56,8 +57,8 @@ public class ImageColorSpaceTest extends TestCaseBase {
                 .fill();
 
         // create AT
-        AffineTransform at = AffineTransform.getTranslateInstance(margin+dspOffsetX, margin+dspOffsetY);
-        at.concatenate(AffineTransform.getScaleInstance(dspWidth-2*dspOffsetX, dspHeight-2*dspOffsetY));
+        AffineTransform at = AffineTransform.getTranslateInstance(margin + dspOffsetX, margin + dspOffsetY);
+        at.concatenate(AffineTransform.getScaleInstance(dspWidth - 2 * dspOffsetX, dspHeight - 2 * dspOffsetY));
 
         float[] matrix = new float[6];
         at.getMatrix(matrix);
@@ -72,6 +73,7 @@ public class ImageColorSpaceTest extends TestCaseBase {
 
     /**
      * Crop center of the image with the display area and add to pdf page
+     *
      * @throws Exception
      */
     @Test
@@ -97,16 +99,16 @@ public class ImageColorSpaceTest extends TestCaseBase {
         float imgHeight = imageData.getHeight();
         float cropX, cropY, cropWidth, cropHeight;
 
-        if(imgWidth/dspWidth > imgHeight/dspHeight) {
+        if (imgWidth / dspWidth > imgHeight / dspHeight) {
             cropHeight = imgHeight;
-            cropWidth = imgHeight/dspHeight * dspWidth;
-            cropX = (imgWidth - cropWidth)/2;
+            cropWidth = imgHeight / dspHeight * dspWidth;
+            cropX = (imgWidth - cropWidth) / 2;
             cropY = 0;
         } else {
             cropWidth = imgWidth;
-            cropHeight = imgWidth/dspWidth * dspHeight;
+            cropHeight = imgWidth / dspWidth * dspHeight;
             cropX = 0;
-            cropY = (imgHeight - cropHeight)/2;
+            cropY = (imgHeight - cropHeight) / 2;
         }
 
         img.setFixedPosition(-cropX, -cropY);
@@ -121,7 +123,7 @@ public class ImageColorSpaceTest extends TestCaseBase {
 
         // create AT
         AffineTransform at = AffineTransform.getTranslateInstance(margin, margin);
-        at.concatenate(AffineTransform.getScaleInstance(dspWidth/croppedImage.getWidth(), dspHeight/croppedImage.getHeight()));
+        at.concatenate(AffineTransform.getScaleInstance(dspWidth / croppedImage.getWidth(), dspHeight / croppedImage.getHeight()));
 
         float[] matrix = new float[6];
         at.getMatrix(matrix);
