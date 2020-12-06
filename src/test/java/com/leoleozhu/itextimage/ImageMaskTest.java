@@ -20,6 +20,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 
+
 public class ImageMaskTest extends TestCaseBase {
 
     @Test
@@ -213,14 +214,25 @@ public class ImageMaskTest extends TestCaseBase {
             maskData = getMaskAlpha(originalBufferedImage, maskBufferedImage);
         }
 
-        // create mask buffer image
-        BufferedImage mask = new BufferedImage(maskData[0].length, maskData.length, BufferedImage.TYPE_BYTE_GRAY);
-        ColorModel maskColorModel = mask.getColorModel();
-        for (int y = 0; y < mask.getHeight(); y++) {
-            for (int x = 0; x < mask.getWidth(); x++) {
-                mask.setRGB(x, y, maskColorModel.getRGB(maskData[y][x]));
+//        // create mask buffer image
+//        BufferedImage mask = new BufferedImage(maskData[0].length, maskData.length, BufferedImage.TYPE_BYTE_GRAY);
+//        ColorModel maskColorModel = mask.getColorModel();
+//        for (int y = 0; y < mask.getHeight(); y++) {
+//            for (int x = 0; x < mask.getWidth(); x++) {
+//                mask.setRGB(x, y, maskColorModel.getRGB(maskData[y][x]));
+
+        int maskHeight = maskData.length;
+        int maskWidth = maskData[0].length;
+
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        for(int y = 0; y < maskData.length; y++) {
+            for(int x= 0; x < maskData[y].length; x++) {
+                byteArrayOutputStream.write(maskData[y][x]);
             }
         }
+
+        BufferedImage mask = new BufferedImage(maskWidth, maskHeight, BufferedImage.TYPE_BYTE_GRAY);
+        mask.getRaster().setDataElements(0, 0, maskWidth, maskHeight, byteArrayOutputStream.toByteArray());
 
         // create image data from mask buffer image
         ByteArrayOutputStream os = new ByteArrayOutputStream();
