@@ -4,7 +4,7 @@ import junit.framework.TestCase;
 
 import java.io.File;
 
-public class TestCaseBase extends TestCase {
+public abstract class TestCaseBase extends TestCase {
 
     private File resourceFolder = new File("src/test/resources");
     private File targetFolder = new File("target/output");
