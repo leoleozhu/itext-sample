@@ -43,7 +43,7 @@ public class SpotColorTest extends TestCaseBase {
 
         pdfCanvas.rectangle(mm2pt(40f), mm2pt(40f), mm2pt(80f), mm2pt(80f)).setLineWidth(mm2pt(1)).stroke();
         pdfCanvas.rectangle(mm2pt(0f), mm2pt(0f), mm2pt(40f), mm2pt(40f)).fillStroke();
-        pdfCanvas.beginText().moveText(mm2pt(48f), mm2pt(48f)).setFontAndSize(font, fontsize).showText(text);
+        pdfCanvas.beginText().moveText(mm2pt(48f), mm2pt(48f)).setFontAndSize(font, fontsize).showText(text).endText();
 
         pdfDocument.close();
     }
@@ -63,7 +63,7 @@ public class SpotColorTest extends TestCaseBase {
 
         pdfCanvas.rectangle(mm2pt(40f), mm2pt(40f), mm2pt(80f), mm2pt(80f)).setLineWidth(mm2pt(1)).stroke();
         pdfCanvas.rectangle(mm2pt(0f), mm2pt(0f), mm2pt(40f), mm2pt(40f)).fillStroke();
-        pdfCanvas.beginText().moveText(mm2pt(48f), mm2pt(48f)).setFontAndSize(font, fontsize).showText(text);
+        pdfCanvas.beginText().moveText(mm2pt(48f), mm2pt(48f)).setFontAndSize(font, fontsize).showText(text).endText();
 
         pdfDocument.close();
     }
@@ -83,7 +83,7 @@ public class SpotColorTest extends TestCaseBase {
 
         pdfCanvas.rectangle(mm2pt(40f), mm2pt(40f), mm2pt(80f), mm2pt(80f)).setLineWidth(mm2pt(1)).stroke();
         pdfCanvas.rectangle(mm2pt(0f), mm2pt(0f), mm2pt(40f), mm2pt(40f)).fillStroke();
-        pdfCanvas.beginText().moveText(mm2pt(48f), mm2pt(48f)).setFontAndSize(font, fontsize).showText(text);
+        pdfCanvas.beginText().moveText(mm2pt(48f), mm2pt(48f)).setFontAndSize(font, fontsize).showText(text).endText();
 
         pdfDocument.close();
     }
@@ -107,7 +107,7 @@ public class SpotColorTest extends TestCaseBase {
 
         pdfCanvas.rectangle(mm2pt(40f), mm2pt(40f), mm2pt(80f), mm2pt(80f)).setLineWidth(mm2pt(1)).stroke();
         pdfCanvas.rectangle(mm2pt(0f), mm2pt(0f), mm2pt(40f), mm2pt(40f)).fillStroke();
-        pdfCanvas.beginText().moveText(mm2pt(48f), mm2pt(48f)).setFontAndSize(font, fontsize).showText(text);
+        pdfCanvas.beginText().moveText(mm2pt(48f), mm2pt(48f)).setFontAndSize(font, fontsize).showText(text).endText();
 
         pdfDocument.close();
     }

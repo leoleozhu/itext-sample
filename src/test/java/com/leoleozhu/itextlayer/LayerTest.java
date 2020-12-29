@@ -66,7 +66,8 @@ public class LayerTest extends TestCaseBase {
         pdfCanvas.rectangle(mm2pt(10f), mm2pt(10f), mm2pt(140f), mm2pt(20f)).setLineWidth(mm2pt(1)).stroke();
         pdfCanvas.beginText().moveText(mm2pt(40f), mm2pt(20f))
                 .setFontAndSize(font, fontsize)
-                .showText(text);
+                .showText(text)
+                .endText();
 
         pdfCanvas.endLayer();
 
