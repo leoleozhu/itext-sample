@@ -2,7 +2,7 @@
 
 ## Preserve the embedded image
 
-Some times you want to crop part of the image and add it to the PDF. If you use `BufferedImage` to manipulate the input images, some information will be lost. For example, exif or color profiles.
+Sometimes you want to crop part of the image and add it to the PDF. If you use `BufferedImage` to manipulate the input images, some information will be lost. For example, exif or color profiles.
 
 To keep the original image file untouched, you could crop the image by using `PdfFormXObject`. Then add the object to a `PDFCanvas`.
 
@@ -16,14 +16,14 @@ Example here <https://github.com/leoleozhu/itext-sample/blob/master/src/test/jav
 
 ## Add image with mask
 
-iText has already provided an example. But if you apply a mask to a transparent image, you get black.
+iText has already provided an example for this topic. But if you apply a mask to a transparent image, you get blacked image.
 
 The reason is that:
 
 * When you create ImageData with `imageData = ImageDataFactory.create`, there is already a mask image in `imageData.getImageMask()`
 * When you apply image mask with `imageData.setImageMask(maskData);`, the original image mask got replaced.
 
-So in order to correctly place an extra mask on the transparent image, you could combine both the original loaded image mask and the new one.
+In order to correctly place an extra mask on the transparent image, you could combine both the original loaded image mask and the new one.
 
 Example here <https://github.com/leoleozhu/itext-sample/blob/master/src/test/java/com/leoleozhu/itextimage/ImageMaskTest.java#L87>
 
