@@ -10,6 +10,7 @@ import com.itextpdf.kernel.pdf.PdfPage;
 import com.itextpdf.kernel.pdf.PdfReader;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
+import com.itextpdf.kernel.pdf.xobject.PdfFormXObject;
 import com.itextpdf.kernel.pdf.xobject.PdfImageXObject;
 import com.leoleozhu.utils.TestCaseBase;
 import org.junit.Test;
@@ -42,6 +43,55 @@ public class ImageReuseTest extends TestCaseBase {
                 newCanvas.release();
             }
         }
+
+    }
+
+
+    @Test
+    public void testReusePageInSameDocument() throws Exception {
+        String imagePath = resourceFile("images/image-ios-profile.jpg");
+        String destination = targetFile("image-reuse-ReusePageInSameDocument.pdf");
+
+        float margin = mm2pt(10f);
+        float dspWidth = mm2pt(160f);
+        float dspHeight = mm2pt(120f);
+        float pageWidth = dspWidth + margin * 2;
+        float pageHeight = dspHeight + margin * 2;
+
+        PdfDocument pdfDocument = new PdfDocument(new PdfWriter(destination));
+
+        ImageData imageData = ImageDataFactory.create(imagePath);
+        float imgWidth = imageData.getWidth();
+        float imgHeight = imageData.getHeight();
+
+        float dspOffsetX = (dspWidth / dspHeight > imgWidth / imgHeight) ?
+                (dspWidth - (dspHeight / imgHeight * imgWidth)) / 2 : 0;
+
+        float dspOffsetY = (dspWidth / dspHeight < imgWidth / imgHeight) ?
+                (dspHeight - (dspWidth / imgWidth * imgHeight)) / 2 : 0;
+
+        // Create one page
+        PdfImageXObject imageXObject = new PdfImageXObject(imageData);
+        PdfPage firstPage = addImageIntoNewPage(pdfDocument, imageXObject, pageWidth, pageHeight, margin, dspWidth, dspHeight, dspOffsetX, dspOffsetY);
+
+        // Reuse first page in the following pages
+        for (int i = 0; i < 100; i++) {
+            PdfPage newPage = pdfDocument.addNewPage(new PageSize(firstPage.getPageSize()));
+
+            // copy boxes
+            newPage.setMediaBox(firstPage.getMediaBox());
+            newPage.setTrimBox(firstPage.getTrimBox());
+            newPage.setBleedBox(firstPage.getBleedBox());
+            newPage.setArtBox(firstPage.getArtBox());
+            newPage.setCropBox(firstPage.getCropBox());
+
+            PdfCanvas newCanvas = new PdfCanvas(newPage);
+            newCanvas.addXObject(new PdfFormXObject(firstPage));
+            newCanvas.release();
+        }
+
+
+        pdfDocument.close();
 
     }
 
