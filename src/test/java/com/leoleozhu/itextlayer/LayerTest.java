@@ -32,7 +32,7 @@ public class LayerTest extends TestCaseBase {
         try (InputStream fontInputStream = new FileInputStream(resourceFile("fonts/SourceHanSansCN-Bold.otf"))) {
             ByteArrayOutputStream fontStream = new ByteArrayOutputStream();
             IOUtils.copy(fontInputStream, fontStream);
-            font = PdfFontFactory.createFont(fontStream.toByteArray(), PdfEncodings.IDENTITY_H, true);
+            font = PdfFontFactory.createFont(fontStream.toByteArray(), PdfEncodings.IDENTITY_H);
         }
 
         fontsize = 12;

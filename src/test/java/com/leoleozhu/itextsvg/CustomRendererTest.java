@@ -6,6 +6,7 @@ import com.leoleozhu.utils.TestCaseBase;
 import org.junit.Test;
 
 import java.io.*;
+import java.nio.file.Files;
 
 public class CustomRendererTest extends TestCaseBase {
 
@@ -15,27 +16,27 @@ public class CustomRendererTest extends TestCaseBase {
         SvgConverterProperties properties = new SvgConverterProperties();
         properties.setRendererFactory(new CustomRendererFactory());
 
-        String relativePosition = "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" viewBox=\"0 0 80 60\">\n" +
-                "    <circle cx=\"50%\" cy=\"50%\" r=\"25\" fill=\"rgb(10, 200, 200)\"/>-->\n" +
+        String relativePosition = "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" viewBox=\"0 0 80 600\">\n" +
+                "    <circle cx=\"50%\" cy=\"50%\" r=\"100\" fill=\"rgb(10, 200, 200)\"/>-->\n" +
                 "</svg>\n";
 
         String destination = targetFile("svg-itext_SVG2PDF1.pdf");
 
 
         try(InputStream svgStream = new ByteArrayInputStream( relativePosition.getBytes())) {
-            try(OutputStream pdfStream = new FileOutputStream(new File(destination))) {
+            try(OutputStream pdfStream = Files.newOutputStream(new File(destination).toPath())) {
                 SvgConverter.createPdf(svgStream, pdfStream, properties);
             }
         }
 
-        String absolutePosition = "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" viewBox=\"0 0 80 60\">\n" +
-                "    <circle cx=\"40\" cy=\"30\" r=\"25\" fill=\"rgb(200, 10, 200)\"/>-->\n" +
+        String absolutePosition = "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" viewBox=\"0 0 800 600\">\n" +
+                "    <circle cx=\"400\" cy=\"300\" r=\"100\" fill=\"rgb(200, 10, 200)\"/>-->\n" +
                 "</svg>\n";
 
         String destination2 = targetFile("svg-itext_SVG2PDF2.pdf");
 
         try(InputStream svgStream = new ByteArrayInputStream(absolutePosition.getBytes())) {
-            try(OutputStream pdfStream = new FileOutputStream(new File(destination2))) {
+            try(OutputStream pdfStream = Files.newOutputStream(new File(destination2).toPath())) {
                 SvgConverter.createPdf(svgStream, pdfStream, properties);
             }
         }
