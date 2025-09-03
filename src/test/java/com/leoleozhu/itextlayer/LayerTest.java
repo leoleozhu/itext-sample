@@ -62,13 +62,11 @@ public class LayerTest extends TestCaseBase {
 
     @Test
     public void testMultipleLayerPdf() throws Exception {
-        String text = "Hello, This text is in a txt layer!";
-
         String destination = targetFile("layer-MultipleLayerPdf.pdf");
         PdfDocument pdfDocument = new PdfDocument(new PdfWriter(destination));
 
         String jpeg = resourceFile("images/image-ios-profile.jpg");
-        String mask = resourceFile("masks/spark.png");
+        String mask = resourceFile("masks/circle.png");
 
         String artImg = resourceFile("images/Artwork.png");
         String whiteImg = resourceFile("images/Artwork_Yellow.png");
@@ -97,52 +95,56 @@ public class LayerTest extends TestCaseBase {
 
             // Image and Mask
             ImageData assetImageData = ImageDataFactory.create(jpeg);
-            ImageData maskImageData = makeBlackAndWhitePng(mask);
+            ImageData maskImageData = createOpaqueBitmask(mask, true);
             maskImageData.makeMask();
             assetImageData.setImageMask(maskImageData);
 
             PdfImageXObject imageXObject = new PdfImageXObject(assetImageData);
-            drawImage(page, whiteLayer, imageBox, imageXObject, false);
+
+            drawImage(page, artLayer, imageBox, imageXObject, false);
         }
 
-
-        // Draw a picture with white spot
+        // Draw a picture with white spot from the image itself
         {
             PdfPage page = pdfDocument.addNewPage(pageSize);
             addBackgroundToPageLayer(page, backgroundLayer, bg);
-            addTextToPageLayer(page, textLayer, textBox, "Image with White Spot behind", textColor);
+            addTextToPageLayer(page, textLayer, textBox, "Image with generated White Spot from itself", textColor);
+
+            // Create white image and also use the same object as a mask
+            ImageData whiteImageData = createOpaqueBitmask(artImg, true);
+            ImageData whiteImageDataAsMask = createOpaqueBitmask(artImg, true);
+            whiteImageDataAsMask.makeMask();
+            whiteImageData.setImageMask(whiteImageDataAsMask);
+            PdfImageXObject whiteImageXObject = new PdfImageXObject(whiteImageData);
+            // set white spot
+            whiteImageXObject.put(PdfName.ColorSpace, white.getColorSpace().getPdfObject());
 
             ImageData artImageData = ImageDataFactory.create(artImg);
             PdfImageXObject artImageXObject = new PdfImageXObject(artImageData);
 
-            ImageData whiteImageData = makeBlackAndWhitePng(whiteImg);
-            PdfImageXObject whiteImageXObject = new PdfImageXObject(whiteImageData);
-            // set white spot
-            whiteImageXObject.put(PdfName.ColorSpace, white.getColorSpace().getPdfObject());
-            whiteImageXObject.makeIndirect(pdfDocument);
-
+            // overPrint property for WHITE object is not important, since normally it's the backend object
             drawImage(page, whiteLayer, imageBox, whiteImageXObject, false);
+            // draw art image above WHITE object (without overPrint property, the white will not be printed)
             drawImage(page, artLayer, imageBox, artImageXObject, true);
         }
 
-        // Draw a picture with white spot / with a mask
+        // Draw a picture with external white spot
         {
             PdfPage page = pdfDocument.addNewPage(pageSize);
             addBackgroundToPageLayer(page, backgroundLayer, bg);
-            addTextToPageLayer(page, textLayer, textBox, "Image with White Spot behind and with a Mask", textColor);
+            addTextToPageLayer(page, textLayer, textBox, "Image with extra White Spot", textColor);
 
-            ImageData artImageData = ImageDataFactory.create(artImg);
-            ImageData maskImageData = makeBlackAndWhitePng(mask);
-            maskImageData.makeMask();
-            artImageData.setImageMask(maskImageData);
-            PdfImageXObject artImageXObject = new PdfImageXObject(artImageData);
-
-            ImageData whiteImageData = makeBlackAndWhitePng(whiteImg);
-            whiteImageData.setImageMask(maskImageData);
+            // external white img
+            ImageData whiteImageData = createOpaqueBitmask(whiteImg, false);
+            ImageData whiteImageDataAsMask = createOpaqueBitmask(whiteImg, false);
+            whiteImageDataAsMask.makeMask();
+            whiteImageData.setImageMask(whiteImageDataAsMask);
             PdfImageXObject whiteImageXObject = new PdfImageXObject(whiteImageData);
             // set white spot
             whiteImageXObject.put(PdfName.ColorSpace, white.getColorSpace().getPdfObject());
-            whiteImageXObject.makeIndirect(pdfDocument);
+
+            ImageData artImageData = ImageDataFactory.create(artImg);
+            PdfImageXObject artImageXObject = new PdfImageXObject(artImageData);
 
             drawImage(page, whiteLayer, imageBox, whiteImageXObject, false);
             drawImage(page, artLayer, imageBox, artImageXObject, true);
@@ -190,22 +192,36 @@ public class LayerTest extends TestCaseBase {
         pdfCanvas.release();
     }
 
-    private static ImageData makeBlackAndWhitePng(String image) throws IOException {
-        BufferedImage bi = ImageIO.read(new File(image));
-        BufferedImage newBi = new BufferedImage(bi.getWidth(), bi.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
-        newBi.getGraphics().drawImage(bi, 0, 0, null);
-        ByteArrayOutputStream os = new ByteArrayOutputStream();
-        ImageIO.write(newBi, "png", os);
-        return ImageDataFactory.create(os.toByteArray());
-    }
+    /**
+     * Creates a bitmask image where opaque pixels are 1 and transparent pixels are 0.
+     *
+     * @param imagePath              Path to the original image.
+     * @param includeSemiTransparent Include pixels which are semi transparent
+     * @return ImageData representing the bitmask image.
+     * @throws IOException If an error occurs while reading or writing the image.
+     */
+    private static ImageData createOpaqueBitmask(String imagePath, boolean includeSemiTransparent) throws IOException {
+        BufferedImage originalImage = ImageIO.read(new File(imagePath));
+        int width = originalImage.getWidth();
+        int height = originalImage.getHeight();
 
-    private static ImageData makeImageSpot(String image) throws IOException {
-        BufferedImage bi = ImageIO.read(new File(image));
-        BufferedImage newBi = new BufferedImage(bi.getWidth(), bi.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
-        bi.getTransparency();
-        newBi.getGraphics().drawImage(bi, 0, 0, null);
+        // Create a new BufferedImage for the bitmask
+        BufferedImage bitmaskImage = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int pixel = originalImage.getRGB(x, y);
+                int alpha = (pixel >> 24) & 0xFF; // Extract alpha channel
+
+                // Set pixel to white (1) if opaque, black (0) if transparent
+                int bitmaskValue = (alpha == 255 || (alpha > 0 && includeSemiTransparent)) ? 0xFFFFFF : 0x000000;
+                bitmaskImage.setRGB(x, y, bitmaskValue);
+            }
+        }
+
+        // Convert the bitmask image to ImageData
         ByteArrayOutputStream os = new ByteArrayOutputStream();
-        ImageIO.write(newBi, "png", os);
+        ImageIO.write(bitmaskImage, "png", os);
         return ImageDataFactory.create(os.toByteArray());
     }
 
@@ -247,7 +263,7 @@ public class LayerTest extends TestCaseBase {
         pdfCanvas.release();
     }
 
-    private void addRectToPageLayer(PdfPage page, PdfLayer layer, Rectangle rect, Color color, boolean overprint) {
+    private void addRectToPageLayer(PdfPage page, PdfLayer layer, Rectangle rect, Color color, boolean overPrint) {
         PdfCanvas pdfCanvas = new PdfCanvas(page);
         pdfCanvas.saveState();
         /// BEGIN Operations
@@ -256,7 +272,7 @@ public class LayerTest extends TestCaseBase {
         pdfCanvas.setFillColor(color)
                 .setStrokeColor(color);
 
-        if (overprint) {
+        if (overPrint) {
             PdfExtGState state = new PdfExtGState();
             state.setFillOverPrintFlag(true);
             state.setStrokeOverPrintFlag(true);
