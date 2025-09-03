@@ -25,9 +25,10 @@ public class ImageMaskTest extends TestCaseBase {
 
     @Test
     public void testPngMaskOnJpeg() throws Exception {
+        String destination = targetFile("image-mask-PngMaskOnJpeg.pdf");
+
         String jpeg = resourceFile("images/image-ios-profile.jpg");
         String mask = resourceFile("masks/spark.png");
-        String destination = targetFile("image-mask-PngMaskOnJpeg.pdf");
 
         float margin = mm2pt(10f);
         float dspWidth = mm2pt(160f);
