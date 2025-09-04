@@ -26,6 +26,11 @@ import java.io.*;
 
 public class LayerTest extends TestCaseBase {
 
+    enum MaskGenerationMethod {
+        SemiAsOpaque,
+        SemiAsTransparent,
+        KeepSemi,
+    }
 
     private PdfFont font;
     private int fontsize;
@@ -66,7 +71,7 @@ public class LayerTest extends TestCaseBase {
         PdfDocument pdfDocument = new PdfDocument(new PdfWriter(destination));
 
         String jpeg = resourceFile("images/image-ios-profile.jpg");
-        String mask = resourceFile("masks/circle.png");
+        String mask = resourceFile("masks/spark.png");
 
         String artImg = resourceFile("images/Artwork.png");
         String whiteImg = resourceFile("images/Artwork_Yellow.png");
@@ -95,7 +100,7 @@ public class LayerTest extends TestCaseBase {
 
             // Image and Mask
             ImageData assetImageData = ImageDataFactory.create(jpeg);
-            ImageData maskImageData = createOpaqueBitmask(mask, true);
+            ImageData maskImageData = createOpaqueMaskImageData(mask, MaskGenerationMethod.KeepSemi);
             maskImageData.makeMask();
             assetImageData.setImageMask(maskImageData);
 
@@ -111,8 +116,8 @@ public class LayerTest extends TestCaseBase {
             addTextToPageLayer(page, textLayer, textBox, "Image with generated White Spot from itself", textColor);
 
             // Create white image and also use the same object as a mask
-            ImageData whiteImageData = createOpaqueBitmask(artImg, true);
-            ImageData whiteImageDataAsMask = createOpaqueBitmask(artImg, true);
+            ImageData whiteImageData = createOpaqueMaskImageData(artImg, MaskGenerationMethod.SemiAsOpaque);
+            ImageData whiteImageDataAsMask = createOpaqueMaskImageData(artImg, MaskGenerationMethod.SemiAsOpaque);
             whiteImageDataAsMask.makeMask();
             whiteImageData.setImageMask(whiteImageDataAsMask);
             PdfImageXObject whiteImageXObject = new PdfImageXObject(whiteImageData);
@@ -135,8 +140,8 @@ public class LayerTest extends TestCaseBase {
             addTextToPageLayer(page, textLayer, textBox, "Image with extra White Spot", textColor);
 
             // external white img
-            ImageData whiteImageData = createOpaqueBitmask(whiteImg, false);
-            ImageData whiteImageDataAsMask = createOpaqueBitmask(whiteImg, false);
+            ImageData whiteImageData = createOpaqueMaskImageData(whiteImg, MaskGenerationMethod.SemiAsOpaque);
+            ImageData whiteImageDataAsMask = createOpaqueMaskImageData(whiteImg, MaskGenerationMethod.SemiAsOpaque);
             whiteImageDataAsMask.makeMask();
             whiteImageData.setImageMask(whiteImageDataAsMask);
             PdfImageXObject whiteImageXObject = new PdfImageXObject(whiteImageData);
@@ -150,6 +155,32 @@ public class LayerTest extends TestCaseBase {
             drawImage(page, artLayer, imageBox, artImageXObject, true);
         }
 
+        // Draw a picture with external white spot and also a Mask on ImageBox
+        {
+            PdfPage page = pdfDocument.addNewPage(pageSize);
+            addBackgroundToPageLayer(page, backgroundLayer, bg);
+            addTextToPageLayer(page, textLayer, textBox, "Image with extra White Spot and Mask", textColor);
+
+            // external white img
+            ImageData whiteImageData = createOpaqueMaskImageData(whiteImg, MaskGenerationMethod.SemiAsOpaque);
+            ImageData whiteImageDataAsMask = createCombinedOpaqueMaskImageData(whiteImg, MaskGenerationMethod.SemiAsOpaque,
+                    mask, MaskGenerationMethod.SemiAsOpaque);
+            whiteImageDataAsMask.makeMask();
+            whiteImageData.setImageMask(whiteImageDataAsMask);
+            PdfImageXObject whiteImageXObject = new PdfImageXObject(whiteImageData);
+            // set white spot
+            whiteImageXObject.put(PdfName.ColorSpace, white.getColorSpace().getPdfObject());
+
+            ImageData artImageData = ImageDataFactory.create(artImg);
+            ImageData artImageMask = createCombinedOpaqueMaskImageData(artImg, MaskGenerationMethod.KeepSemi,
+                    mask, MaskGenerationMethod.KeepSemi);
+            artImageMask.makeMask();
+            artImageData.setImageMask(artImageMask);
+            PdfImageXObject artImageXObject = new PdfImageXObject(artImageData);
+
+            drawImage(page, whiteLayer, imageBox, whiteImageXObject, false);
+            drawImage(page, artLayer, imageBox, artImageXObject, true);
+        }
         // Draw a Rect
         {
             PdfPage page = pdfDocument.addNewPage(pageSize);
@@ -195,34 +226,104 @@ public class LayerTest extends TestCaseBase {
     /**
      * Creates a bitmask image where opaque pixels are 1 and transparent pixels are 0.
      *
-     * @param imagePath              Path to the original image.
-     * @param includeSemiTransparent Include pixels which are semi transparent
+     * @param imagePath            Path to the original image.
+     * @param maskGenerationMethod Include pixels which are semi transparent
      * @return ImageData representing the bitmask image.
      * @throws IOException If an error occurs while reading or writing the image.
      */
-    private static ImageData createOpaqueBitmask(String imagePath, boolean includeSemiTransparent) throws IOException {
-        BufferedImage originalImage = ImageIO.read(new File(imagePath));
-        int width = originalImage.getWidth();
-        int height = originalImage.getHeight();
+    private static ImageData createOpaqueMaskImageData(String imagePath, MaskGenerationMethod maskGenerationMethod) throws IOException {
+        BufferedImage opaqueMaskImage = getOpaqueBufferedImage(imagePath, maskGenerationMethod);
 
-        // Create a new BufferedImage for the bitmask
-        BufferedImage bitmaskImage = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
+        // Convert the bitmask image to ImageData
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        ImageIO.write(opaqueMaskImage, "png", os);
+        return ImageDataFactory.create(os.toByteArray());
+    }
 
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                int pixel = originalImage.getRGB(x, y);
-                int alpha = (pixel >> 24) & 0xFF; // Extract alpha channel
+    /**
+     * Creates a bitmask image where opaque pixels are 1 and transparent pixels are 0.
+     *
+     * @param imagePath   Path to the original image.
+     * @param method1     How pixels are handled which are semi transparent for `imagePath`
+     * @param boxMaskPath Extra mask image
+     * @param method2     How pixels are handled which are semi transparent for `boxMaskPath`
+     * @return ImageData representing the bitmask image.
+     * @throws IOException If an error occurs while reading or writing the image.
+     */
+    private static ImageData createCombinedOpaqueMaskImageData(String imagePath, MaskGenerationMethod method1,
+                                                               String boxMaskPath, MaskGenerationMethod method2) throws IOException {
 
-                // Set pixel to white (1) if opaque, black (0) if transparent
-                int bitmaskValue = (alpha == 255 || (alpha > 0 && includeSemiTransparent)) ? 0xFFFFFF : 0x000000;
-                bitmaskImage.setRGB(x, y, bitmaskValue);
+        // Generate two gray scale image as alpha channel
+        BufferedImage opaqueMaskImage = getOpaqueBufferedImage(imagePath, method1);
+        BufferedImage boxMaskImage = getOpaqueBufferedImage(boxMaskPath, method2);
+
+        final int TRANSPARENT = 0x00;
+        final int OPAQUE = 0xFF;
+
+        final int w1 = opaqueMaskImage.getWidth();
+        final int h1 = opaqueMaskImage.getHeight();
+        final int w2 = boxMaskImage.getWidth();
+        final int h2 = boxMaskImage.getHeight();
+
+        // Merge BufferedImage
+        for (int x1 = 0; x1 < w1; x1++) {
+            int x2 = Math.floorDiv(x1 * w2, w1);
+            for (int y1 = 0; y1 < h1; y1++) {
+                int y2 = Math.floorDiv(y1 * h2, h1);
+                int pixel1 = opaqueMaskImage.getRGB(x1, y1) & 0xFF; // Extract grayscale value
+                int pixel2 = boxMaskImage.getRGB(x2, y2) & 0xFF; // Extract grayscale value
+
+                int value = Math.floorDiv(pixel1 * pixel2, OPAQUE);
+
+                // Set the combined value in the output image
+                opaqueMaskImage.setRGB(x1, y1, 0xFF000000 | value << 16 | value << 8 | value);
             }
         }
 
         // Convert the bitmask image to ImageData
         ByteArrayOutputStream os = new ByteArrayOutputStream();
-        ImageIO.write(bitmaskImage, "png", os);
+        ImageIO.write(opaqueMaskImage, "png", os);
         return ImageDataFactory.create(os.toByteArray());
+    }
+
+    private static BufferedImage getOpaqueBufferedImage(String imagePath, MaskGenerationMethod maskGenerationMethod) throws IOException {
+        BufferedImage originalImage = ImageIO.read(new File(imagePath));
+        int width = originalImage.getWidth();
+        int height = originalImage.getHeight();
+
+        // Create a new BufferedImage for the mask
+        BufferedImage opaqueMaskImage = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
+
+        final int TRANSPARENT = 0x00;
+        final int OPAQUE = 0xFF;
+
+        boolean hasAlpha = originalImage.getColorModel().hasAlpha();
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int pixel = originalImage.getRGB(x, y);
+                int alpha = hasAlpha ? (pixel >> 24) & 0xFF : OPAQUE;
+                int value = alpha & OPAQUE;
+                switch (maskGenerationMethod) {
+                    case SemiAsOpaque:
+                        if (alpha != TRANSPARENT) {
+                            value = OPAQUE;
+                        }
+                        break;
+                    case SemiAsTransparent:
+                        if (alpha != OPAQUE) {
+                            value = TRANSPARENT;
+                        }
+                        break;
+                    default:
+                        value = alpha & OPAQUE;
+                        break;
+                }
+                opaqueMaskImage.setRGB(x, y, 0xFF000000 | value << 16 | value << 8 | value);
+            }
+        }
+
+        return opaqueMaskImage;
     }
 
     private void drawImage(
